@@ -1,0 +1,8 @@
+  TCCR3A = 0;                               // set entire TCCR3A register to 0
+  TCCR3B = 0;                               // same for TCCR3B
+  TCNT3  = 0;                               //initialize counter value to 0
+  
+  OCR3A = 6249;                             // = (16*10^6) / (hz*prescaler) - 1 (must be <65536)    6249:25ms             2499:10ms
+  TCCR3B |= (1 << WGM32);                   // turn on CTC mode
+  TCCR3B |= (1 << CS31) | (1 << CS30);      // Set CS31 and 30 for 64 prescaler 
+  TIMSK3 |= (1 << OCIE3A);                  // enable timer compare interrupt
