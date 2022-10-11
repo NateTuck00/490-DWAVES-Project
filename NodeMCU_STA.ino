@@ -1,7 +1,9 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
+#include "ESPAsyncWebServer.h"
 
+AsyncWebServer gatewayServer(80); // gateway server on port 80 // make post requests to this server for manual override
 
 void setup() {
   const char* ssid = "DWAVES";
