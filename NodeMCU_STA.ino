@@ -1,9 +1,30 @@
+/* to do:
+1. Do header processing from serial communications from the control unit
+
+*/
+
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-#include <WiFiClient.h>
 #include "ESPAsyncWebServer.h"
+#include <WiFiClient.h>
 
-AsyncWebServer gatewayServer(80); // gateway server on port 80 // make post requests to this server for manual override
+AsyncWebServer gatewayServer(80); // gateway server on port 80
+
+String manOverride() {/* do manual override and return status of manual override */
+  Serial.write("override\n");
+  while(Serial.available())
+    return(Serial.readString()); // wait for control unit to send back a status for the override
+    // responses from control unit will need headers to make sure the correct message is processed
+    //return(Serial.read()); // alternative
+}
+
+String controls() { /* return state of environmental controls */
+  Serial.write("controls\n");
+  while(Serial.available())
+    return(Serial.readString()); // wait for control unit to send back a status for the override
+    // responses from control unit will need headers to make sure the correct message is processed
+    //return(Serial.read()); // alternative
+}
 
 void setup() {
   const char* ssid = "DWAVES";
@@ -16,6 +37,13 @@ void setup() {
     Serial.print(".");
   }
 
+  gatewayServer.on("/manOverride", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
+  request->send_P(200, "text/plain", manOverride().c_str());
+  });
+
+  gatewayServer.on("/controls", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
+  request->send_P(200, "text/plain", controls().c_str());
+  });
 
 
   /* I don't know why I got obsessed with this */
@@ -26,8 +54,6 @@ void setup() {
   Serial.print("Password: ");
   Serial.println(password);
   Serial.println();
-  
-  
 }
 
 void loop() {
