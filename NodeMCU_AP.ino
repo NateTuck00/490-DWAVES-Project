@@ -67,10 +67,7 @@ String readHumidity() { // returns humidity as a string
 
 String UI() {/* Create webpage for UI here and return as a string */
   char body[1024];
-  String concentration = readConcentration();
-  String temperature = readTemperature();
-  String humidity = readHumidity();
-  sprintf(body, "<html> <head> <title>ESP8266 Page</title> <meta name='viewport' content='width=device-width, initial-scale=1.0'> <style> h1 {text-align:center; } td {font-size: 50%; padding-top: 30px;} .temp {font-size:150%; color: #FF0000;} .conc {font-size:150%; color: #00FF00;} .hum {font-size:150%; color: #0000FF;} </style> </head> <body> <h1>ESP8266 Sensor Page</h1> <div id='div1'> <table> <tr> <td>Temperature</td><td class='temp'>%s</td> </tr> <tr> <td>Alcohol Concentration</td><td class='conc'>%s</td> </tr> <tr> <td>Humidity</td><td class='hum'>%s</td> </tr> </div> </body> </html>", temperature, concentration, humidity);
+  sprintf(body, "<html> <head> <title>ESP8266 Page</title> <meta name='viewport' content='width=device-width, initial-scale=1.0'> <style> h1 {text-align:center; } td {font-size: 50%; padding-top: 30px;} .temp {font-size:150%; color: #FF0000;} .conc {font-size:150%; color: #00FF00;} .hum {font-size:150%; color: #0000FF;} </style> </head> <body> <h1>ESP8266 Sensor Page</h1> <div id='div1'> <table> <tr> <td>Temperature</td><td class='temp'>%s</td> </tr> <tr> <td>Alcohol Concentration</td><td class='conc'>%s</td> </tr> <tr> <td>Humidity</td><td class='hum'>%s</td> </tr> </div> </body> </html>", readTemperature(), readConcentration(), readHumidity());
   return body;
 }
 
