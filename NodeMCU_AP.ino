@@ -1,6 +1,8 @@
 /* to do:
 1. User Interface code
-2. Do some clean-up
+2. ajax and javascript for updating the page without reloading
+3. State of environmental controls for UI, and manual override
+4. Do some clean-up
 */
 
 #include <ESP8266WiFi.h>
@@ -64,7 +66,12 @@ String readHumidity() { // returns humidity as a string
 }
 
 String UI() {/* Create webpage for UI here and return as a string */
-  return controlsState;
+  char body[1024];
+  String concentration = readConcentration();
+  String temperature = readTemperature();
+  String humidity = readHumidity();
+  sprintf(body, "<html> <head> <title>ESP8266 Page</title> <meta name='viewport' content='width=device-width, initial-scale=1.0'> <style> h1 {text-align:center; } td {font-size: 50%; padding-top: 30px;} .temp {font-size:150%; color: #FF0000;} .conc {font-size:150%; color: #00FF00;} .hum {font-size:150%; color: #0000FF;} </style> </head> <body> <h1>ESP8266 Sensor Page</h1> <div id='div1'> <table> <tr> <td>Temperature</td><td class='temp'>%s</td> </tr> <tr> <td>Alcohol Concentration</td><td class='conc'>%s</td> </tr> <tr> <td>Humidity</td><td class='hum'>%s</td> </tr> </div> </body> </html>", temperature, concentration, humidity);
+  return body;
 }
 
 AsyncWebServer sensorServer(80); // sensor server on port 80 (HTTP)
@@ -145,7 +152,7 @@ void setup() {
   /* These two sensorServer blocks below deal with the UI and the manual override */
 
   sensorServer.on("/UI", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for the UI display // the object name should potentially just be "/"
-  request->send_P(200, "text/plain", UI().c_str());
+  request->send_P(200, "text/html", UI().c_str());
   });
 
   sensorServer.on("/override", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for the manual override
