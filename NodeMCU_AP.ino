@@ -11,6 +11,10 @@
 #include <WiFiClient.h>
 #include "Zanshin_BME680.h"
 
+String systemTemperature;
+String systemConcentration;
+String systemHumidity;
+
 String stationIP = "http://192.168.1.22"; // ip of the station server
 
 int i = 3000000; // iterate in loop() // basically a timer // initially set high so that get request in loop is made first
@@ -67,7 +71,7 @@ String readHumidity() { // returns humidity as a string
 
 String UI() {/* Create webpage for UI here and return as a string */
   char body[1024];
-  sprintf(body, "<html> <head> <title>ESP8266 Page</title> <meta name='viewport' content='width=device-width, initial-scale=1.0'> <style> h1 {text-align:center; } td {font-size: 50%; padding-top: 30px;} .temp {font-size:150%; color: #FF0000;} .conc {font-size:150%; color: #00FF00;} .hum {font-size:150%; color: #0000FF;} </style> </head> <body> <h1>ESP8266 Sensor Page</h1> <div id='div1'> <table> <tr> <td>Temperature</td><td class='temp'>%s</td> </tr> <tr> <td>Alcohol Concentration</td><td class='conc'>%s</td> </tr> <tr> <td>Humidity</td><td class='hum'>%s</td> </tr> </div> </body> </html>", readTemperature(), readConcentration(), readHumidity());
+  sprintf(body, "<html> <head> <title>ESP8266 Page</title> <meta name='viewport' content='width=device-width, initial-scale=1.0'> <style> h1 {text-align:center; } td {font-size: 50%; padding-top: 30px;} .temp {font-size:150%; color: #FF0000;} .conc {font-size:150%; color: #00FF00;} .hum {font-size:150%; color: #0000FF;} </style> </head> <body> <h1>ESP8266 Sensor Page</h1> <div id='div1'> <table> <tr> <td>Temperature</td><td class='temp'>%s</td> </tr> <tr> <td>Alcohol Concentration</td><td class='conc'>%s</td> </tr> <tr> <td>Humidity</td><td class='hum'>%s</td> </tr> </div> </body> </html>", systemTemperature, systemConcentration, systemHumidity);
   return body;
 }
 
@@ -177,14 +181,34 @@ void loop() {
     //Serial.println("if (i == 1000000) ... ");
     WiFiClient client;
     HTTPClient http;
-    
     String conPath = stationIP + "/controls";
     http.begin(client, conPath.c_str());
     int getState = http.GET();
     Serial.print("http.GET() returned: "); Serial.println(getState);
-
     controlsState = http.getString(); // this will be the state of the controls. It's returned to the global controlState variable to be used in the UI function
     //Serial.println(controlsState);
+
+
+
+    conPath = stationIP + "/concentration";
+    http.begin(client, conPath.c_str());
+    getState = http.GET();
+    Serial.print("http.GET() returned: "); Serial.println(getState);
+    systemConcentration = http.getString(); 
+
+
+    conPath = stationIP + "/temperature";
+    http.begin(client, conPath.c_str());
+    getState = http.GET();
+    Serial.print("http.GET() returned: "); Serial.println(getState);
+    systemTemperature = http.getString(); 
+
+
+    conPath = stationIP + "/humidity";
+    http.begin(client, conPath.c_str());
+    getState = http.GET();
+    Serial.print("http.GET() returned: "); Serial.println(getState);
+    systemHumidity = http.getString(); 
 
     i = 0; // i is set back to 0 so the "timer" restarts
   }
