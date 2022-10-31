@@ -9,6 +9,7 @@
 #include <WiFiClient.h>
 #include "Zanshin_BME680.h"
 
+bool communicating = false; // flag that shows if something is being written to the serial port
 String systemTemperature;
 String systemConcentration;
 String systemHumidity;
@@ -21,7 +22,7 @@ BME680_Class BME680; // BME680 Object
 
 static int32_t  temp, humidity, pressure, gas; // readings from BME680
 
-float altitude(const int32_t press, const float seaLevel = 1013.25);
+float altitude(const int32_t press, const float seaLevel = 1015);
 float altitude(const int32_t press, const float seaLevel) {
   /*!
   @brief     This converts a pressure measurement into a height in meters
@@ -65,7 +66,7 @@ String largest(String String1, String String2) {
 
   if (Float1 >= Float2) 
     return String(Float1);
-  else if (Float2 > Float1)
+  else if (Float1 < Float2)
     return String(Float2);
 }
 
@@ -76,25 +77,25 @@ String largest(String String1, String String2) {
 AsyncWebServer stationServer(80); // gateway server on port 80
 
 String manOverride() {/* do manual override and return status of manual override */
-  /*
-  Serial.write("override\n");
+  while (communicating) {/* wait while another write is happening */}
+  communicating = true; // set communicating flag to true
+  Serial.write("content: manual override\r\n\r\n");
   while(Serial.available())
     return(Serial.readString()); // wait for control unit to send back a status for the override
     // responses from control unit will need headers to make sure the correct message is processed
     //return(Serial.read()); // alternative
-  */
-  return "Test Override";
+  communicating = false; // set communicating flag back to false
 }
 
 String controls() { /* return state of environmental controls */
-  /*
+  while (communicating) {/* wait for a communication to finish*/}
+  communicating = true;
   Serial.write("controls\n");
   while(Serial.available())
     return(Serial.readString()); // wait for control unit to send back a status for the override
     // responses from control unit will need headers to make sure the correct message is processed
     //return(Serial.read()); // alternative
-  */
-  return "Test Controls";
+  communicating = false; // set communicating flag back to false
 }
 
 String accessPointIP = "http://192.168.1.184";
@@ -196,39 +197,40 @@ void loop() {
 
   http.begin(client, conPath.c_str());
   http.GET();
-  //Serial.print("Ethanol Concentration: ");
-  //Serial.println(http.getString());
   Serial.write("Ethanol Concentration: ");
   String AP_reading = http.getString();
   String STA_reading = readConcentration();
-  //Serial.println(AP_reading);
-  //Serial.println(STA_reading);
   systemConcentration = largest(AP_reading, STA_reading);
-  Serial.write(systemConcentration.c_str());
-  Serial.write("\n");
+
 
   http.begin(client, tempPath.c_str());
   http.GET();
-  //Serial.print("Temperature: ");
-  //Serial.println(http.getString());
   Serial.write("Temperature: ");
   AP_reading = http.getString();
   STA_reading = readTemperature();
   systemTemperature = largest(AP_reading, STA_reading);
-  Serial.write(systemTemperature.c_str());
-  Serial.write("\n");
+
 
   http.begin(client, humPath.c_str());
   http.GET();
-  //Serial.print("Humidity: ");
-  //Serial.println(http.getString());
   Serial.write("Humidity: ");
   AP_reading = http.getString();
   STA_reading = readHumidity();  
   systemHumidity = largest(AP_reading, STA_reading);
-  Serial.write(systemHumidity.c_str());
-  Serial.write("\n");
-  Serial.println();
+  
+
+  char sensorReadings[128];
+  sprintf(sensorReadings, 
+  "content: sensor values\r\n"
+  "temperature:%s,concentration:%s,humidity:%s\r\n\r\n", systemTemperature, systemConcentration, systemHumidity);
+  while (communicating) {/* wait while someone else is communicating */}
+  communicating = true; // communicating flag is set to true so no one else can write to the serial line
+  Serial.write(sensorReadings.c_str()); // write sensor readings to serial port
+  communicating = false; // flag is set back to false when done
+  
+  
+  
+
 
   delay(5000);
 }
