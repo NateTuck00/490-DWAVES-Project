@@ -84,7 +84,16 @@ String manOverride() {/* do manual override and return status of manual override
     return(Serial.readString()); // wait for control unit to send back a status for the override
     // responses from control unit will need headers to make sure the correct message is processed
     //return(Serial.read()); // alternative
-  communicating = false; // set communicating flag back to false
+}
+
+String overrideOff() {
+  while (communicating) {/* wait while another write is happening */}
+  communicating = true; // set communicating flag to true
+  Serial.write("content: manual override off\r\n\r\n");
+  while(Serial.available())
+    return(Serial.readString()); // wait for control unit to send back a status for the override
+    // responses from control unit will need headers to make sure the correct message is processed
+    //return(Serial.read()); // alternative
 }
 
 String controls() { /* return state of environmental controls */
@@ -95,7 +104,6 @@ String controls() { /* return state of environmental controls */
     return(Serial.readString()); // wait for control unit to send back a status for the override
     // responses from control unit will need headers to make sure the correct message is processed
     //return(Serial.read()); // alternative
-  communicating = false; // set communicating flag back to false
 }
 
 String accessPointIP = "http://192.168.1.184";
@@ -156,6 +164,12 @@ void setup() {
 
   stationServer.on("/manOverride", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
   request->send_P(200, "text/plain", manOverride().c_str());
+  communicating = false; // set communicating flag back to false
+  });
+
+  stationServer.on("/overrideOff", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
+  request->send_P(200, "text/plain", overrideOff().c_str());
+  communicating = false; // set communicating flag back to false
   });
 
   stationServer.on("/controls", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
