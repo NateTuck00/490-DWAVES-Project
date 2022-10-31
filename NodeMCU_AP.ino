@@ -19,8 +19,6 @@ String stationIP = "http://192.168.1.22"; // ip of the station server
 
 int i = 3000000; // iterate in loop() // basically a timer // initially set high so that get request in loop is made first
 String controlsState; // global variable for state of the environtal controls
-int overrideRequest = 0; // flag is set to 1 to override the system
-String manOverrideState; //not really needed... but we'll see what I do with it
 
 /*************************
 |      Sensor Setup      |
@@ -185,11 +183,6 @@ void setup() {
   request->send_P(200, "text/html", UI().c_str());
   });
 
-  sensorServer.on("/override", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for the manual override
-  overrideRequest = 1;
-  request->send_P(200, "text/plain", "Request sent");
-  });
-
   sensorServer.begin();
   Serial.println("Done!");
   Serial.print("Server IP address: ");
@@ -218,7 +211,6 @@ void loop() {
     //Serial.println(controlsState);
 
 
-
     conPath = stationIP + "/concentration";
     http.begin(client, conPath.c_str());
     getState = http.GET();
@@ -242,17 +234,4 @@ void loop() {
     i = 0; // i is set back to 0 so the "timer" restarts
   }
   i = i + 1; // i is iterated
-
-  if (overrideRequest == 1) { // if override flag is set http request is sent to the control unit
-    WiFiClient client;
-    HTTPClient http;
-    
-    String conPath = stationIP + "/manOverride";
-    http.begin(client, conPath.c_str());
-    http.GET();
-
-    manOverrideState = http.getString();
-    overrideRequest = 0; // flag is unset so only one override is sent
-    Serial.println("Manual Override Sent");
-  }
 }
