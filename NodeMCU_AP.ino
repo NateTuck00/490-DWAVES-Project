@@ -28,6 +28,7 @@ String manOverrideState; //not really needed... but we'll see what I do with it
 // source: https://github.com/Zanduino/BME680/blob/master/examples/I2CDemo/I2CDemo.ino
 
 BME680_Class BME680; // BME680 Object
+
 static int32_t  temp, humidity, pressure, gas; // readings from BME680
 
 float altitude(const int32_t press, const float seaLevel = 1015);
@@ -109,7 +110,6 @@ IPAddress local_IP(192, 168, 1, 184);
 IPAddress gateway(192, 168, 1, 1);
 
 void setup() {
-  Serial.begin(9600);
   // start sample code
   /*!
   @brief    Arduino method called once at startup to initialize the system
@@ -118,7 +118,9 @@ void setup() {
             control never returns
   @return   void
   */
+  
   Serial.begin(9600);  // Start serial port at Baud rate
+  
 #ifdef __AVR_ATmega32U4__      // If this is a 32U4 processor, then wait 3 seconds to init USB port
   delay(3000);
 #endif
