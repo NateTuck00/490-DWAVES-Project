@@ -19,7 +19,8 @@ String stationIP = "192.168.1.22"; // ip of the station server
 
 int i = 3000000; // iterate in loop() // basically a timer // initially set high so that get request in loop is made first
 String controlsState; // global variable for state of the environtal controls
-
+int overrideRequest = 0; // flag is set to 1 to override the system
+String manOverrideState; //not really needed... but we'll see what I do with it
 /*************************
 |      Sensor Setup      |
 *************************/
