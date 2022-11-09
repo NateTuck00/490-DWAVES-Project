@@ -15,7 +15,7 @@ String systemTemperature;
 String systemConcentration;
 String systemHumidity;
 
-String stationIP = "http://192.168.1.22"; // ip of the station server
+String stationIP = "192.168.1.22"; // ip of the station server
 
 int i = 3000000; // iterate in loop() // basically a timer // initially set high so that get request in loop is made first
 String controlsState; // global variable for state of the environtal controls
@@ -97,7 +97,7 @@ sprintf(body, "<html>"
 "</tr>"
 "</div>" 
 "</body>"
-"</html>", systemTemperature, systemConcentration, systemHumidity, overrideRequest);
+"</html>", systemTemperature, systemConcentration, systemHumidity);
 return body;
 }
 
@@ -177,12 +177,12 @@ void setup() {
   request->send_P(200, "text/plain", readHumidity().c_str());
   });
 
-  /* These two sensorServer blocks below deal with the UI and the manual override */
+  /* These sensorServer block below deal with the UI */
 
   sensorServer.on("/UI", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for the UI display // the object name should potentially just be "/"
   request->send_P(200, "text/html", UI().c_str());
   });
-
+  
   sensorServer.begin();
   Serial.println("Done!");
   Serial.print("Server IP address: ");
@@ -203,33 +203,39 @@ void loop() {
     //Serial.println("if (i == 1000000) ... ");
     WiFiClient client;
     HTTPClient http;
-    String conPath = stationIP + "/controls";
-    http.begin(client, conPath.c_str());
+    String controlsPath = "http://" + stationIP + "/controls";
+    http.begin(client, controlsPath.c_str());
     int getState = http.GET();
     Serial.print("http.GET() returned: "); Serial.println(getState);
     controlsState = http.getString(); // this will be the state of the controls. It's returned to the global controlState variable to be used in the UI function
     //Serial.println(controlsState);
 
 
-    conPath = stationIP + "/concentration";
+    String conPath = "http://" + stationIP + "/concentration";
     http.begin(client, conPath.c_str());
     getState = http.GET();
     Serial.print("http.GET() returned: "); Serial.println(getState);
     systemConcentration = http.getString(); 
 
 
-    conPath = stationIP + "/temperature";
-    http.begin(client, conPath.c_str());
+    String tempPath = "http://" + stationIP + "/temperature";
+    http.begin(client, tempPath.c_str());
     getState = http.GET();
     Serial.print("http.GET() returned: "); Serial.println(getState);
     systemTemperature = http.getString(); 
 
 
-    conPath = stationIP + "/humidity";
-    http.begin(client, conPath.c_str());
+    String humPath = "http://" + stationIP + "/humidity";
+    http.begin(client, humPath.c_str());
     getState = http.GET();
     Serial.print("http.GET() returned: "); Serial.println(getState);
     systemHumidity = http.getString(); 
+
+    String controlPath = "http://" + stationIP + "/controlPath";
+    http.begin(client, controlPath.c_str());
+    getState = http.GET();
+    Serial.print("http.GET() returned: "); Serial.println(getState);
+    controlsState = http.getString();
 
     i = 0; // i is set back to 0 so the "timer" restarts
   }
