@@ -13,6 +13,7 @@ bool communicating = false; // flag that shows if something is being written to 
 String systemTemperature;
 String systemConcentration;
 String systemHumidity;
+String controlsState;
 
 /*************************
 |      Sensor Setup      |
@@ -86,16 +87,6 @@ String manOverride() {/* do manual override and return status of manual override
     //return(Serial.read()); // alternative
 }
 
-String overrideOff() {
-  while (communicating) {/* wait while another write is happening */}
-  communicating = true; // set communicating flag to true
-  Serial.write("content: manual override off\r\n\r\n");
-  while(Serial.available())
-    return(Serial.readString()); // wait for control unit to send back a status for the override
-    // responses from control unit will need headers to make sure the correct message is processed
-    //return(Serial.read()); // alternative
-}
-
 String controls() { /* return state of environmental controls */
   while (communicating) {/* wait for a communication to finish*/}
   communicating = true;
@@ -161,19 +152,13 @@ void setup() {
     Serial.print(".");
   }
   
-
-  stationServer.on("/manOverride", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
-  request->send_P(200, "text/plain", manOverride().c_str());
-  communicating = false; // set communicating flag back to false
-  });
-
-  stationServer.on("/overrideOff", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
-  request->send_P(200, "text/plain", overrideOff().c_str());
-  communicating = false; // set communicating flag back to false
-  });
-
   stationServer.on("/controls", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
   request->send_P(200, "text/plain", controls().c_str());
+  });
+
+  stationServer.on("/manoverride", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
+  controlsState = manOverride();
+  request->redirect((accessPointIP + "/UI").c_str());
   });
 
   stationServer.on("/temperature", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
@@ -186,6 +171,10 @@ void setup() {
 
   stationServer.on("/humidity", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
   request->send_P(200, "text/plain", systemHumidity.c_str());
+  });
+
+  stationServer.on("/controlsState", HTTP_GET, [](AsyncWebServerRequest *request) {
+  request->send_P(200, "text/plain", controlsState.c_str());    
   });
 
   stationServer.begin(); // begin the server
@@ -239,11 +228,8 @@ void loop() {
   "temperature:%s,concentration:%s,humidity:%s\r\n\r\n", systemTemperature, systemConcentration, systemHumidity);
   while (communicating) {/* wait while someone else is communicating */}
   communicating = true; // communicating flag is set to true so no one else can write to the serial line
-  Serial.write(sensorReadings.c_str()); // write sensor readings to serial port
+  Serial.write(sensorReadings); // write sensor readings to serial port
   communicating = false; // flag is set back to false when done
-  
-  
-  
 
 
   delay(5000);
