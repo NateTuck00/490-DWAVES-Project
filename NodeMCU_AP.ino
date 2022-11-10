@@ -109,7 +109,7 @@ sprintf(body, "<html>"
 "</tr>"
 "</div>" 
 "</body>"
-"</html>", systemTemperature, systemConcentration, systemHumidity);
+"</html>", systemTemperature, systemConcentration, systemHumidity,controlsState);
 return body;
 }
 
