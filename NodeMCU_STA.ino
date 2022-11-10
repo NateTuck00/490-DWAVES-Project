@@ -79,7 +79,7 @@ AsyncWebServer stationServer(80); // gateway server on port 80
 String manOverride() {/* do manual override and return status of manual override */
   while (communicating) {/* wait while another write is happening */}
   communicating = true; // set communicating flag to true
-  //Serial.write("content: manual override\r\n\r\n");
+  Serial.write("content: manual override\r\n\r\n");
   //while(Serial.available())
   //  return(Serial.readString()); // wait for control unit to send back a status for the override
     // responses from control unit will need headers to make sure the correct message is processed
@@ -90,7 +90,7 @@ String manOverride() {/* do manual override and return status of manual override
 String controls() { /* return state of environmental controls */
   while (communicating) {/* wait for a communication to finish*/}
   communicating = true;
-  //Serial.write("content: return controls status\r\n\r\n");
+  Serial.write("content: return controls status\r\n\r\n");
   //while(Serial.available())
   //  controlsState = Serial.readString();
   //  return(controlsState); // wait for control unit to send back a status for the override
@@ -158,7 +158,7 @@ void setup() {
   request->send_P(200, "text/plain", controls().c_str());
   });
 
-  stationServer.on("/manoverride", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
+  stationServer.on("/manOverride", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
   controlsState = manOverride();
   request->redirect((accessPointIP + "/UI").c_str());
   });
