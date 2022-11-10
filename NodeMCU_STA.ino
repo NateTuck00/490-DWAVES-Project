@@ -1,6 +1,5 @@
 /* to do:
 1. Do header processing from serial communications from the control unit
-
 */
 
 #include <ESP8266WiFi.h>
@@ -61,7 +60,7 @@ String readHumidity() { // returns humidity as a string
   return buf;
 }
 
-String largest(String String1, String String2) {
+String largest(String String1, String String2) { // converts strings to floats and returns the largest one
   float Float1 = String1.toFloat();
   float Float2 = String2.toFloat();
 
@@ -80,22 +79,24 @@ AsyncWebServer stationServer(80); // gateway server on port 80
 String manOverride() {/* do manual override and return status of manual override */
   while (communicating) {/* wait while another write is happening */}
   communicating = true; // set communicating flag to true
-  Serial.write("content: manual override\r\n\r\n");
-  while(Serial.available())
-    return(Serial.readString()); // wait for control unit to send back a status for the override
+  //Serial.write("content: manual override\r\n\r\n");
+  //while(Serial.available())
+  //  return(Serial.readString()); // wait for control unit to send back a status for the override
     // responses from control unit will need headers to make sure the correct message is processed
     //return(Serial.read()); // alternative
+  return "toggle controls";
 }
 
 String controls() { /* return state of environmental controls */
   while (communicating) {/* wait for a communication to finish*/}
   communicating = true;
-  Serial.write("content: return controls status\r\n\r\n");
-  while(Serial.available())
-    controlsState = Serial.readString();
-    return(controlsState); // wait for control unit to send back a status for the override
+  //Serial.write("content: return controls status\r\n\r\n");
+  //while(Serial.available())
+  //  controlsState = Serial.readString();
+  //  return(controlsState); // wait for control unit to send back a status for the override
     // responses from control unit will need headers to make sure the correct message is processed
     //return(Serial.read()); // alternative
+  return "system is ...";
 }
 
 String accessPointIP = "http://192.168.1.184";
@@ -153,7 +154,7 @@ void setup() {
     Serial.print(".");
   }
   
-  stationServer.on("/controls", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
+  stationServer.on("/controls", HTTP_GET, [](AsyncWebServerRequest *request){ // requests the state of the controls from the arduino
   request->send_P(200, "text/plain", controls().c_str());
   });
 
@@ -201,7 +202,6 @@ void loop() {
 
   http.begin(client, conPath.c_str());
   http.GET();
-  Serial.write("Ethanol Concentration: ");
   String AP_reading = http.getString();
   String STA_reading = readConcentration();
   systemConcentration = largest(AP_reading, STA_reading);
@@ -209,7 +209,6 @@ void loop() {
 
   http.begin(client, tempPath.c_str());
   http.GET();
-  Serial.write("Temperature: ");
   AP_reading = http.getString();
   STA_reading = readTemperature();
   systemTemperature = largest(AP_reading, STA_reading);
@@ -217,7 +216,6 @@ void loop() {
 
   http.begin(client, humPath.c_str());
   http.GET();
-  Serial.write("Humidity: ");
   AP_reading = http.getString();
   STA_reading = readHumidity();  
   systemHumidity = largest(AP_reading, STA_reading);
