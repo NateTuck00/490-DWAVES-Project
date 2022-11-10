@@ -5,6 +5,7 @@
 4. Do some clean-up
 */
 
+#include <vector>
 #include <ESP8266WiFi.h>
 #include "ESPAsyncWebServer.h"
 #include <ESP8266HTTPClient.h>
@@ -15,12 +16,23 @@ String systemTemperature;
 String systemConcentration;
 String systemHumidity;
 
+float temperature_v[5];
+float concentration_v[5];
+float humidity_v[5];
+
+for (int i = 0; i < 5; ++i) {
+  temperature_v[i] = 0;
+  concentration_v[i] = 0;
+  humidity_v[i] = 0;
+}
+
+
+
 String stationIP = "192.168.1.22"; // ip of the station server
 
 int i = 3000000; // iterate in loop() // basically a timer // initially set high so that get request in loop is made first
 String controlsState; // global variable for state of the environtal controls
-int overrideRequest = 0; // flag is set to 1 to override the system
-String manOverrideState; //not really needed... but we'll see what I do with it
+
 /*************************
 |      Sensor Setup      |
 *************************/
@@ -71,37 +83,34 @@ String readHumidity() { // returns humidity as a string
 
 String UI() {/* Create webpage for UI here and return as a string */
 char body[1024];
-sprintf(body, 
-"<html>"
-  "<head>"
-    "<title>ESP8266 Page</title>" 
-    "<body style=\"background-color:#f7f7f7;\"></body>"
-  "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" 
-  "<style>"
-   "h1 {text-align:center; color: #000000 }" 
-   "td {font-size: 40px; padding-top: 30px; color: #000000}" 
-   ".temp {font-size:40px; color: #000000;}" 
-   ".conc {font-size:40px; color: #000000;}" 
-   ".hum {font-size:40px; color: #000000;}" 
-   ".overide {font-size:40px; color: #000000;}" 
-   
-   "</style>"
-    "</head>" 
-  "<body>" 
-    "<h1>D.W.A.V.E.S. User Interface</h1>" 
-    "<div id='div1'>"
-      "<table>" 
-        "<tr>"
-      "<td>Temperature</td><td class='temp'>%s</td>" 
-    "</tr>" 
-    "<tr> <td> Alcohol Concentration</td><td class='conc'> %s </td> </tr>" 
-    "<tr> <td> Humidity</td><td class='hum'>%s</td> </tr>" 
-    "<td class='overide'><a href=\"http://192.168.1.22/manOverride\">Click Here To Overide System</a></td> </tr>"
-    "<td class='overide'><a href=\"http://192.168.1.22/overrideOff\">Click Here To Deactive Overide</a></td> </tr>" 
-    "</tr>"
-  "</div>" 
+sprintf(body, "<html>"
+"<head>"
+"<title>ESP8266 Page</title> "
+"<body style=\"background-color:#2f17e4;\"></body>"
+"<meta name='viewport' content='width=device-width, initial-scale=1.0'> "
+"<style>"
+"h1 {text-align:center; color: #e0e0e0 }"
+"td {font-size: 40px; padding-top: 30px; color: #f6ef33} "
+".temp {font-size:40px; color: #FF0000;}"
+".conc {font-size:40px; color: #00FF00;}"
+".hum {font-size:40px; color: #ff00b3;}"
+".overide {font-size:40px; color: #82dee6;}"
+"</style>"
+"</head>"
+"<body>"
+"<h1>Test Rig Readings</h1>"
+"<div id='div1'>"
+"<table>"
+"<tr>"
+"<td>Temperature</td><td class='temp'>%s</td>"
+"</tr>"
+"<tr> <td> Alcohol Concentration</td><td class='conc'> %s </td> </tr>" 
+"<tr> <td> Humidity</td><td class='hum'>%s</td> </tr>" 
+"<td class='overide'> <marquee behavior=\"scroll\" direction=\"down\">Click Here To Overide System</marquee></td> </tr>" 
+"</tr>"
+"</div>" 
 "</body>"
- "</html>", systemTemperature, systemConcentration, systemHumidity, overrideRequest);
+"</html>", systemTemperature, systemConcentration, systemHumidity);
 return body;
 }
 
@@ -212,15 +221,14 @@ void loop() {
     int getState = http.GET();
     Serial.print("http.GET() returned: "); Serial.println(getState);
     controlsState = http.getString(); // this will be the state of the controls. It's returned to the global controlState variable to be used in the UI function
-    //Serial.println(controlsState);
 
 
     String conPath = "http://" + stationIP + "/concentration";
     http.begin(client, conPath.c_str());
     getState = http.GET();
     Serial.print("http.GET() returned: "); Serial.println(getState);
-    systemConcentration = http.getString(); 
-
+    systemConcentration = http.getString();
+    
 
     String tempPath = "http://" + stationIP + "/temperature";
     http.begin(client, tempPath.c_str());
@@ -233,13 +241,17 @@ void loop() {
     http.begin(client, humPath.c_str());
     getState = http.GET();
     Serial.print("http.GET() returned: "); Serial.println(getState);
-    systemHumidity = http.getString(); 
+    systemHumidity = http.getString();
 
-    String controlPath = "http://" + stationIP + "/controlPath";
-    http.begin(client, controlPath.c_str());
-    getState = http.GET();
-    Serial.print("http.GET() returned: "); Serial.println(getState);
-    controlsState = http.getString();
+    for (int i = 1; i < 5; ++i) {
+      temperature_v[i-1] = temperature_v[i];
+      concentration_v[i-1] = concentration_v[i];
+      humidity_v[i-1] = humidity_v[i];
+    }
+    temperature_v[4] = systemTemperature;
+    concentration_v[4] = systemConcentration;
+    humidity_v[4] = systemHumidity;
+
 
     i = 0; // i is set back to 0 so the "timer" restarts
   }
