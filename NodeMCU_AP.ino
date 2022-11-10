@@ -20,14 +20,6 @@ float temperature_v[5];
 float concentration_v[5];
 float humidity_v[5];
 
-for (int i = 0; i < 5; ++i) {
-  temperature_v[i] = 0;
-  concentration_v[i] = 0;
-  humidity_v[i] = 0;
-}
-
-
-
 String stationIP = "192.168.1.22"; // ip of the station server
 
 int i = 3000000; // iterate in loop() // basically a timer // initially set high so that get request in loop is made first
@@ -81,6 +73,10 @@ String readHumidity() { // returns humidity as a string
   return buf;
 }
 
+/*************************
+|     User Interface     |
+*************************/
+
 String UI() {/* Create webpage for UI here and return as a string */
 char body[1024];
 sprintf(body, "<html>"
@@ -113,6 +109,10 @@ sprintf(body, "<html>"
 "</html>", systemTemperature, systemConcentration, systemHumidity);
 return body;
 }
+
+/*************************
+|     Server and AP      |
+*************************/
 
 AsyncWebServer sensorServer(80); // sensor server on port 80 (HTTP)
 
@@ -209,6 +209,13 @@ void setup() {
   Serial.print("http://"); Serial.print(IP); Serial.println("/UI");
   Serial.print("http://"); Serial.print(IP); Serial.println("/override");
 
+
+  for (int i = 0; i < 5; ++i) { // history arrays are filled
+    temperature_v[i] = 0;
+    concentration_v[i] = 0;
+    humidity_v[i] = 0;
+  }
+
 }
 
 void loop() {
@@ -248,9 +255,9 @@ void loop() {
       concentration_v[i-1] = concentration_v[i];
       humidity_v[i-1] = humidity_v[i];
     }
-    temperature_v[4] = systemTemperature;
-    concentration_v[4] = systemConcentration;
-    humidity_v[4] = systemHumidity;
+    temperature_v[4] = systemTemperature.toFloat();
+    concentration_v[4] = systemConcentration.toFloat();
+    humidity_v[4] = systemHumidity.toFloat();
 
 
     i = 0; // i is set back to 0 so the "timer" restarts
