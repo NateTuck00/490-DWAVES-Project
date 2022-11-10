@@ -105,7 +105,7 @@ sprintf(body, "<html>"
 "</tr>"
 "<tr> <td> Alcohol Concentration</td><td class='conc'> %s </td> </tr>" 
 "<tr> <td> Humidity</td><td class='hum'>%s</td> </tr>" 
-"<td><a href="\http://192.168.1.22/manOverride\"> <div class=\"wrapper\"> <div class=\"box blue\"></div> </a> </td>",
+"<td><a href=\"http://192.168.1.22/manOverride\"> <div class=\"wrapper\"> <div class=\"box blue\"></div> </a> </td>",
 systemTemperature, systemConcentration, systemHumidity);
 sprintf(body2,
 "<tr><td>System State</td><td class='conc'>%s</td></tr> "
