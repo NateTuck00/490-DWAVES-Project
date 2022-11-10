@@ -15,6 +15,7 @@
 String systemTemperature;
 String systemConcentration;
 String systemHumidity;
+String controlsState; // global variable for state of the environtal controls
 
 float temperature_v[5];
 float concentration_v[5];
@@ -23,7 +24,6 @@ float humidity_v[5];
 String stationIP = "192.168.1.22"; // ip of the station server
 
 int i = 3000000; // iterate in loop() // basically a timer // initially set high so that get request in loop is made first
-String controlsState; // global variable for state of the environtal controls
 
 /*************************
 |      Sensor Setup      |
@@ -79,11 +79,12 @@ String readHumidity() { // returns humidity as a string
 
 String UI() {/* Create webpage for UI here and return as a string */
 char body[1024];
+char body2[1024];
 sprintf(body, "<html>"
 "<head>"
 "<title>ESP8266 Page</title> "
-"<script src="https://cdn.anychart.com/releases/8.0.1/js/anychart-core.min.js"></script>"
-"<script src="https://cdn.anychart.com/releases/8.0.1/js/anychart-core.min.js"></script>"
+//"<script src=\"https://cdn.anychart.com/releases/8.0.1/js/anychart-core.min.js\"></script>"
+//"<script src=\"https://cdn.anychart.com/releases/8.0.1/js/anychart-core.min.js\"></script>"
 "<body style=\"background-color:#ffffff;\"></body>"
 "<meta http-equiv=\"refresh\" content=\"3\">"
 "<style>"
@@ -104,13 +105,15 @@ sprintf(body, "<html>"
 "</tr>"
 "<tr> <td> Alcohol Concentration</td><td class='conc'> %s </td> </tr>" 
 "<tr> <td> Humidity</td><td class='hum'>%s</td> </tr>" 
-"<td><a href="http://192.168.1.22/manOverride"><img src="power.png" alt="Power Button" width="120" height="100"></a> </td>" 
+"<td><a href=\"http://192.168.1.22/manOverride\"><img src=\"power.png\" alt=\"Power Button\" width=\"120\" height=\"100\"></a> </td>",
+systemTemperature, systemConcentration, systemHumidity);
+sprintf(body2,
 "<tr><td>System State</td><td class='conc'>%s</td></tr> "
 "</tr>"
 "</div>" 
 "</body>"
-"</html>", systemTemperature, systemConcentration, systemHumidity, controlsState);
-return body;
+"</html>", controlsState.c_str());
+return String(body) + String(body2);
 }
 
 /*************************
@@ -231,6 +234,7 @@ void loop() {
     int getState = http.GET();
     Serial.print("http.GET() returned: "); Serial.println(getState);
     controlsState = http.getString(); // this will be the state of the controls. It's returned to the global controlState variable to be used in the UI function
+    Serial.println(controlsState);
 
 
     String conPath = "http://" + stationIP + "/concentration";
