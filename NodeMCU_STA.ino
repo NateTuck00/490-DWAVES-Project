@@ -13,6 +13,10 @@ String systemTemperature;
 String systemConcentration;
 String systemHumidity;
 String controlsState;
+int i = 0; // iterator for timer
+
+bool requestControls = false;
+bool toggleOverride = false;
 
 /*************************
 |      Sensor Setup      |
@@ -76,29 +80,6 @@ String largest(String String1, String String2) { // converts strings to floats a
 
 AsyncWebServer stationServer(80); // gateway server on port 80
 
-String manOverride() {/* do manual override and return status of manual override */
-  while (communicating) {/* wait while another write is happening */}
-  communicating = true; // set communicating flag to true
-  Serial.write("content: manual override\r\n\r\n");
-  //while(Serial.available())
-  //  return(Serial.readString()); // wait for control unit to send back a status for the override
-    // responses from control unit will need headers to make sure the correct message is processed
-    //return(Serial.read()); // alternative
-  return "toggle controls";
-}
-
-String controls() { /* return state of environmental controls */
-  while (communicating) {/* wait for a communication to finish*/}
-  communicating = true;
-  Serial.write("content: return controls status\r\n\r\n");
-  //while(Serial.available())
-  //  controlsState = Serial.readString();
-  //  return(controlsState); // wait for control unit to send back a status for the override
-    // responses from control unit will need headers to make sure the correct message is processed
-    //return(Serial.read()); // alternative
-  return "system is ...";
-}
-
 String accessPointIP = "http://192.168.1.184";
 
 IPAddress staticIP(192,168,1,22);
@@ -155,11 +136,13 @@ void setup() {
   }
   
   stationServer.on("/controls", HTTP_GET, [](AsyncWebServerRequest *request){ // requests the state of the controls from the arduino
-  request->send_P(200, "text/plain", controls().c_str());
+  requestControls = true;
+  request->send_P(200, "text/plain", controlsState.c_str());
   });
 
   stationServer.on("/manOverride", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
-  controlsState = manOverride();
+  //controlsState = manOverride();
+  toggleOverride = true;
   request->redirect((accessPointIP + "/UI").c_str());
   });
 
@@ -193,43 +176,67 @@ void setup() {
 }
 
 void loop() {
-  String conPath = accessPointIP + "/concentration";
-  String tempPath = accessPointIP + "/temperature";
-  String humPath = accessPointIP + "/humidity";
-
-  WiFiClient client;
-  HTTPClient http;
-
-  http.begin(client, conPath.c_str());
-  http.GET();
-  String AP_reading = http.getString();
-  String STA_reading = readConcentration();
-  systemConcentration = largest(AP_reading, STA_reading);
-
-
-  http.begin(client, tempPath.c_str());
-  http.GET();
-  AP_reading = http.getString();
-  STA_reading = readTemperature();
-  systemTemperature = largest(AP_reading, STA_reading);
-
-
-  http.begin(client, humPath.c_str());
-  http.GET();
-  AP_reading = http.getString();
-  STA_reading = readHumidity();  
-  systemHumidity = largest(AP_reading, STA_reading);
   
+  if (i == 3000000) {
+    String conPath = accessPointIP + "/concentration";
+    String tempPath = accessPointIP + "/temperature";
+    String humPath = accessPointIP + "/humidity";
 
-  char sensorReadings[128];
-  sprintf(sensorReadings, 
-  "content: sensor values\r\n"
-  "temperature:%s,concentration:%s,humidity:%s\r\n\r\n", systemTemperature, systemConcentration, systemHumidity);
-  while (communicating) {/* wait while someone else is communicating */}
-  communicating = true; // communicating flag is set to true so no one else can write to the serial line
-  Serial.write(sensorReadings); // write sensor readings to serial port
-  communicating = false; // flag is set back to false when done
+    WiFiClient client;
+    HTTPClient http;
+
+    http.begin(client, conPath.c_str());
+    http.GET();
+    String AP_reading = http.getString();
+    String STA_reading = readConcentration();
+    systemConcentration = largest(AP_reading, STA_reading);
 
 
-  delay(5000);
+    http.begin(client, tempPath.c_str());
+    http.GET();
+    AP_reading = http.getString();
+    STA_reading = readTemperature();
+    systemTemperature = largest(AP_reading, STA_reading);
+
+
+    http.begin(client, humPath.c_str());
+    http.GET();
+    AP_reading = http.getString();
+    STA_reading = readHumidity();  
+    systemHumidity = largest(AP_reading, STA_reading);
+    
+
+    char sensorReadings[128];
+    sprintf(sensorReadings, 
+    "content: sensor values\r\n"
+    "temperature:%s,concentration:%s,humidity:%s\r\n\r\n", systemTemperature, systemConcentration, systemHumidity);
+    while (communicating) {/* wait while someone else is communicating */}
+    communicating = true; // communicating flag is set to true so no one else can write to the serial line
+    Serial.write(sensorReadings); // write sensor readings to serial port
+    communicating = false; // flag is set back to false when done
+    i = 0;
+  }
+  i++;
+  if (requestControls) {
+    while (communicating) {/* wait for a communication to finish*/}
+    communicating = true;
+    Serial.write("content: return controls status\r\n\r\n");
+    //while(Serial.available())
+    //  controlsState = Serial.readString();
+    controlsState = "test controls state";
+    communicating = false;
+    requestControls = false;
+  }
+
+  if (toggleOverride) {
+    while (communicating) {/* wait for a communication to finish*/}
+    communicating = true;
+    Serial.write("content: manual override\r\n\r\n");
+    //while(Serial.available())
+    //  controlsState = Serial.readString();
+    controlsState = "test override state";
+    communicating = false;
+    toggleOverride = false;
+  }
+
 }
