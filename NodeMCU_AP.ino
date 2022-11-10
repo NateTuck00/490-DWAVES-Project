@@ -5,7 +5,6 @@
 4. Do some clean-up
 */
 
-#include <vector>
 #include <ESP8266WiFi.h>
 #include "ESPAsyncWebServer.h"
 #include <ESP8266HTTPClient.h>
@@ -117,6 +116,7 @@ sprintf(body2,
 "</html>", controlsState.c_str());
 return String(body) + String(body2);
 }
+
 
 /*************************
 |     Server and AP      |
