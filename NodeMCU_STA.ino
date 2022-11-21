@@ -14,6 +14,9 @@ String systemConcentration;
 String systemHumidity;
 String controlsState;
 int i = 0; // iterator for timer
+unsigned long time_0 = millis();
+bool runRequests = true;
+bool override = false;
 
 bool requestControls = false;
 bool toggleOverride = false;
@@ -44,10 +47,22 @@ float altitude(const int32_t press, const float seaLevel) {
 }  // of method altitude()
 
 String readConcentration() { // returns alcohol concentration as a string
-  BME680.getSensorData(temp, humidity, pressure, gas);
-  char buf[16];
-  sprintf(buf, "%d.%d", (int8_t)(gas / 100), (uint8_t)(gas % 100));
-  return buf;
+  static int32_t  temp, humidity, pressure, gas;  // BME readings
+  static char     buf[16];                        // sprintf text buffer
+  BME680.getSensorData(temp, humidity, pressure, gas);  // Get readings
+  sprintf(buf, "%4d.%02d\n", abs((int16_t)(gas / 100)), abs((uint8_t)(gas % 100)));
+  float sensorValue = String(buf).toFloat();
+  int sensorMin = 400;
+  int sensorMax = 0;
+  //sensorValue = constrain(sensorValue, sensorMax, sensorMin);
+  if (sensorValue > 400) {
+    sensorValue = 400;
+  }
+  //Serial.println(sensorValue);
+  sensorValue = map(sensorValue, sensorMin, sensorMax, 0, 10000);
+  sensorValue = sensorValue / 100;
+  //Serial.print("sensor value: ");
+  return String(sensorValue).c_str();
 }
 
 String readTemperature() { // returns the temperature as a string
@@ -143,6 +158,7 @@ void setup() {
   stationServer.on("/manOverride", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
   //controlsState = manOverride();
   toggleOverride = true;
+  override = !override;
   request->redirect((accessPointIP + "/UI").c_str());
   });
 
@@ -177,7 +193,7 @@ void setup() {
 
 void loop() {
   
-  if (i == 3000000) {
+  if (millis()-time_0 >= 1000 * 10 || runRequests) { // 10 second timer
     String conPath = accessPointIP + "/concentration";
     String tempPath = accessPointIP + "/temperature";
     String humPath = accessPointIP + "/humidity";
@@ -206,24 +222,33 @@ void loop() {
     systemHumidity = largest(AP_reading, STA_reading);
     
 
-    char sensorReadings[128];
+    char sensorReadings[32];
     sprintf(sensorReadings, 
-    "content: sensor values\r\n"
-    "temperature:%s,concentration:%s,humidity:%s\r\n\r\n", systemTemperature, systemConcentration, systemHumidity);
+    "T %s C %s H %s", systemTemperature, systemConcentration, systemHumidity);
     while (communicating) {/* wait while someone else is communicating */}
     communicating = true; // communicating flag is set to true so no one else can write to the serial line
     Serial.write(sensorReadings); // write sensor readings to serial port
     communicating = false; // flag is set back to false when done
-    i = 0;
+    //i = 0;
+    time_0 = millis();
+    runRequests = false;
   }
-  i++;
+  //i++;
   if (requestControls) {
     while (communicating) {/* wait for a communication to finish*/}
     communicating = true;
-    Serial.write("content: return controls status\r\n\r\n");
-    //while(Serial.available())
-    //  controlsState = Serial.readString();
-    controlsState = "test controls state";
+    Serial.write("456.789"); // code for request controls
+    //Serial.println();
+    //while(Serial.available()) {}
+      //controlsState = Serial.readString();
+      //Serial.println(Serial.readString());
+    //Serial.println("%s", controlsState);
+    if (override){
+      controlsState = "Off";
+    }
+    else if (!override) {
+      controlsState = "On";
+    }
     communicating = false;
     requestControls = false;
   }
@@ -231,12 +256,13 @@ void loop() {
   if (toggleOverride) {
     while (communicating) {/* wait for a communication to finish*/}
     communicating = true;
-    Serial.write("content: manual override\r\n\r\n");
-    //while(Serial.available())
-    //  controlsState = Serial.readString();
-    controlsState = "test override state";
+    Serial.write("123.456"); // code for manual override
+    //Serial.println();
+    //while(Serial.available()) {}
+      //controlsState = Serial.readString();
+      //Serial.println(Serial.readString());
+    //Serial.println("%s", controlsState);    
     communicating = false;
     toggleOverride = false;
   }
-
 }
