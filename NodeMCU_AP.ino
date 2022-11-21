@@ -14,15 +14,17 @@
 String systemTemperature;
 String systemConcentration;
 String systemHumidity;
-String controlsState; // global variable for state of the environtal controls
+String controlsState = "Unknown"; // global variable for state of the environtal controls
+bool runRequests = true;
 
-float temperature_v[5];
-float concentration_v[5];
-float humidity_v[5];
+//float temperature_v[5];
+//float concentration_v[5];
+//float humidity_v[5];
 
 String stationIP = "192.168.1.22"; // ip of the station server
 
-int i = 3000000; // iterate in loop() // basically a timer // initially set high so that get request in loop is made first
+int timer = 3000000; // iterate in loop() // basically a timer // initially set high so that get request in loop is made first
+unsigned long time_0 = millis();
 
 /*************************
 |      Sensor Setup      |
@@ -52,10 +54,24 @@ float altitude(const int32_t press, const float seaLevel) {
 
 
 String readConcentration() { // returns alcohol concentration as a string
-  BME680.getSensorData(temp, humidity, pressure, gas);
-  char buf[16];
-  sprintf(buf, "%d.%d", (int8_t)(gas / 100), (uint8_t)(gas % 100));
-  return buf;
+  static int32_t  temp, humidity, pressure, gas;  // BME readings
+  static char     buf[16];                        // sprintf text buffer
+  BME680.getSensorData(temp, humidity, pressure, gas);  // Get readings
+  sprintf(buf, "%4d.%02d\n", abs((int16_t)(gas / 100)), abs((uint8_t)(gas % 100)));
+  //Serial.print("buf: ");
+  //Serial.println(buf);
+  float sensorValue = String(buf).toFloat();
+  int sensorMin = 400;
+  int sensorMax = 0;
+  //sensorValue = constrain(sensorValue, sensorMax, sensorMin);
+  if (sensorValue > 400) {
+    sensorValue = 400;
+  }
+  //Serial.println(sensorValue);
+  sensorValue = map(sensorValue, sensorMin, sensorMax, 0, 10000);
+  sensorValue = sensorValue / 100;
+  //Serial.print("sensor value: ");
+  return String(sensorValue).c_str();
 }
 
 String readTemperature() { // returns the temperature as a string
@@ -70,6 +86,16 @@ String readHumidity() { // returns humidity as a string
   char buf[16];
   sprintf(buf, "%d.%d", (int8_t)(humidity / 1000), (uint8_t)(humidity % 1000));
   return buf;
+}
+
+String largest(String String1, String String2) { // converts strings to floats and returns the largest one
+  float Float1 = String1.toFloat();
+  float Float2 = String2.toFloat();
+
+  if (Float1 >= Float2) 
+    return String(Float1);
+  else if (Float1 < Float2)
+    return String(Float2);
 }
 
 /*************************
@@ -102,10 +128,10 @@ sprintf(body, "<html>"
 "<div id='div1'>"
 "<table>"
 "<tr>"
-"<td>Temperature</td><td class='temp'>%s</td>"
+"<td>Temperature</td><td class='temp'>%s \xb0 C</td>"
 "</tr>"
-"<tr> <td> Alcohol Concentration</td><td class='conc'> %s </td> </tr>" 
-"<tr> <td> Humidity</td><td class='hum'>%s</td> </tr>" 
+"<tr> <td> Alcohol Concentration</td><td class='conc'> %s %%</td> </tr>" 
+"<tr> <td> Humidity</td><td class='hum'>%s %%</td> </tr>" 
 "<td><a href=\"http://192.168.1.22/manOverride\"> <div class=\"wrapper\"> <div class=\"box blue\"></div> </a> </td>",
 systemTemperature, systemConcentration, systemHumidity);
 sprintf(body2,
@@ -195,6 +221,7 @@ void setup() {
   });
 
   sensorServer.on("/humidity", HTTP_GET, [](AsyncWebServerRequest *request){ // web request for humidity
+  runRequests = true; // this is to get the two timers synchronized
   request->send_P(200, "text/plain", readHumidity().c_str());
   });
 
@@ -218,16 +245,18 @@ void setup() {
   Serial.print("http://"); Serial.print(IP); Serial.println("/override");
 
 
-  for (int i = 0; i < 5; ++i) { // history arrays are filled
-    temperature_v[i] = 0;
-    concentration_v[i] = 0;
-    humidity_v[i] = 0;
-  }
+  //for (int i = 0; i < 5; ++i) { // history arrays are filled
+  //  temperature_v[i] = 0;
+  //  concentration_v[i] = 0;
+  //  humidity_v[i] = 0;
+  //}
 
+  //unsigned long myTime = millis(); // timer for requests
 }
 
 void loop() {
-  if (i == 3000000) { // apparently http requests can only be made in this loop() // about once every 24 seconds
+  //if ((timer == 3000000)) { // apparently http requests can only be made in this loop() // about once every 24 seconds
+  if (millis()-time_0 >= 1000 * 10 || runRequests) { // 1000 * seconds
     //Serial.println("if (i == 1000000) ... ");
     WiFiClient client;
     HTTPClient http;
@@ -243,33 +272,35 @@ void loop() {
     http.begin(client, conPath.c_str());
     getState = http.GET();
     Serial.print("http.GET() returned: "); Serial.println(getState);
-    systemConcentration = http.getString();
+    systemConcentration = largest(http.getString(), readConcentration());
     
 
     String tempPath = "http://" + stationIP + "/temperature";
     http.begin(client, tempPath.c_str());
     getState = http.GET();
     Serial.print("http.GET() returned: "); Serial.println(getState);
-    systemTemperature = http.getString(); 
+    systemTemperature = largest(http.getString(), readTemperature()); 
 
 
     String humPath = "http://" + stationIP + "/humidity";
     http.begin(client, humPath.c_str());
     getState = http.GET();
     Serial.print("http.GET() returned: "); Serial.println(getState);
-    systemHumidity = http.getString();
+    systemHumidity = largest(http.getString(), readHumidity());
 
-    for (int i = 1; i < 5; ++i) {
-      temperature_v[i-1] = temperature_v[i];
-      concentration_v[i-1] = concentration_v[i];
-      humidity_v[i-1] = humidity_v[i];
-    }
-    temperature_v[4] = systemTemperature.toFloat();
-    concentration_v[4] = systemConcentration.toFloat();
-    humidity_v[4] = systemHumidity.toFloat();
+    //for (int i = 1; i < 5; ++i) {
+    //  temperature_v[i-1] = temperature_v[i];
+    //  concentration_v[i-1] = concentration_v[i];
+    //  humidity_v[i-1] = humidity_v[i];
+    //}
+    //temperature_v[4] = systemTemperature.toFloat();
+    //concentration_v[4] = systemConcentration.toFloat();
+    //humidity_v[4] = systemHumidity.toFloat();
 
-
-    i = 0; // i is set back to 0 so the "timer" restarts
+    //Serial.println(readConcentration());
+    //timer = 0; // timer is set back to 0 so the "timer" restarts
+    time_0 = millis();
+    runRequests = false;
   }
-  i = i + 1; // i is iterated
+  //timer++; // timer is iterated
 }
