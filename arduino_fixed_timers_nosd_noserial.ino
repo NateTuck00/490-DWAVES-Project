@@ -6,6 +6,22 @@ word VentPin = 3;
 bool substate= false;
 
 
+void pwm25kHzBegin() {
+  TCCR2A = 0;                               // TC2 Control Register A
+  TCCR2B = 0;                               // TC2 Control Register B
+  TIMSK2 = 0;                               // TC2 Interrupt Mask Register
+  TIFR2 = 0;                                // TC2 Interrupt Flag Register
+  TCCR2A |= (1 << COM2B1) | (1 << WGM21) | (1 << WGM20);  // OC2B cleared/set on match when up/down counting, fast PWM
+  TCCR2B |= (1 << WGM22) | (1 << CS21);     // prescaler 8
+  OCR2A = 79;                               // TOP overflow value (Hz)
+  OCR2B = 0;
+}
+
+void pwmDuty(byte ocrb) {
+  OCR2B = ocrb;                             // PWM Width (duty)
+}
+
+
 
 void setup() {
 
@@ -64,12 +80,16 @@ while (Serial.available()) {
     //Serial.println("Request to return controls");
     substate = true;
     // need to write back the controls in serial
-
+/*
     if((concentration <= 80)|| (manualoverride== true)){
       Serial.write("Off");
     }
+    */
+    if(manualoverride== true){
+      Serial.write("Off");
+    }
 
-    if(concentration > 80){
+    else{
       Serial.write("On");
     }
 
@@ -87,7 +107,6 @@ while (Serial.available()) {
     concentration = Serial.parseFloat();
     //Serial.print("Concentration: ");
     //Serial.println(concentration);
-
 
     humidity = Serial.parseFloat();
     //Serial.print("Humidity: ");
@@ -113,7 +132,15 @@ while (Serial.available()) {
 State 1: Fans off louvers off
 */
 
-if((concentration < 80)|| (manualoverride== true)){
+if(manualoverride ==true){
+    pwmDuty(0);
+    pos=155;
+
+
+
+}
+
+else if(concentration < 20){
   
   //Timer1.setPwmDuty(9, 0);//fan control
   pwmDuty(0);
@@ -126,7 +153,7 @@ if((concentration < 80)|| (manualoverride== true)){
 State 2: Fans low louvers low
 */
 
-else if(concentration < 200){
+else if(concentration < 30){
   
   pwmDuty(20);
   pos=80;
@@ -138,7 +165,7 @@ else if(concentration < 200){
 State3: Fans medium low louvers medium low
 */
 
-else if(concentration < 400){
+else if(concentration < 50){
   
   pwmDuty(40);
   pos=105;
@@ -151,7 +178,7 @@ else if(concentration < 400){
 State4: Fans medium high louvers medium high
 */
 
-else if(concentration < 800){
+else if(concentration < 75){
   
   pwmDuty(60);
   pos=130;
@@ -163,7 +190,7 @@ else if(concentration < 800){
 State5: Wide open
 */
 
-else if(concentration >= 800){
+else if(concentration >= 75){
   
   pwmDuty(79);
   pos=155;
@@ -175,7 +202,7 @@ else if(concentration >= 800){
 if(oldpos > pos){
   //Serial.println("oldpos > pos");
   
-  for (temppos = 155; temppos >= pos; temppos -= 1) { // goes from 180 degrees to 0 degrees
+  for (temppos = oldpos; temppos >= pos; temppos -= 1) { // goes from 180 degrees to 0 degrees
     myservo.write(temppos);              // tell servo to go to position in variable 'temppos'
     delay(30);                       // waits 30 ms for the servo to reach the position
   }
@@ -188,7 +215,7 @@ else if(oldpos < pos){
   //Serial.println("oldpos < pos");
  
   
-  for (temppos = 55; temppos <= pos; temppos += 1) { // goes from 180 degrees to 0 degrees
+  for (temppos = oldpos; temppos <= pos; temppos += 1) { // goes from 180 degrees to 0 degrees
     myservo.write(temppos);              // tell servo to go to position in variable 'temppos'
     delay(30);                       // waits 30 ms for the servo to reach the position
   }
@@ -203,6 +230,7 @@ else if(oldpos == pos){
   delay(30);
    
   
+
 }//end if oldpos<
 
 oldpos=pos;
@@ -212,21 +240,6 @@ oldpos=pos;
 
 }//end void loop
 
-
-void pwm25kHzBegin() {
-  TCCR2A = 0;                               // TC2 Control Register A
-  TCCR2B = 0;                               // TC2 Control Register B
-  TIMSK2 = 0;                               // TC2 Interrupt Mask Register
-  TIFR2 = 0;                                // TC2 Interrupt Flag Register
-  TCCR2A |= (1 << COM2B1) | (1 << WGM21) | (1 << WGM20);  // OC2B cleared/set on match when up/down counting, fast PWM
-  TCCR2B |= (1 << WGM22) | (1 << CS21);     // prescaler 8
-  OCR2A = 79;                               // TOP overflow value (Hz)
-  OCR2B = 0;
-}
-
-void pwmDuty(byte ocrb) {
-  OCR2B = ocrb;                             // PWM Width (duty)
-}
 
 
 
